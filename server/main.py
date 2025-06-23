@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
-from routers import rooms, reservations
+from routers import reservations, session
 
 # 환경 변수 로드
 load_dotenv()
@@ -12,7 +12,7 @@ load_dotenv()
 # FastAPI 앱 생성
 app = FastAPI(
     title="Room Crawler API",
-    description="숙소 검색 및 예약률 관리 API",
+    description="숙소 예약률 관리 API",
     version="1.0.0"
 )
 
@@ -26,7 +26,7 @@ app.add_middleware(
 )
 
 # 라우터 등록
-app.include_router(rooms.router, prefix="/api")
+app.include_router(session.router)
 app.include_router(reservations.router)
 
 # 기본 엔드포인트

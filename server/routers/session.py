@@ -1,36 +1,10 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from models import SearchParams, RoomListResponse
 from utils.session import get_session_from_cookies
+from services.reservation_service import ReservationService
 
-router = APIRouter(tags=["rooms"])
-
-@router.post("/rooms", response_model=RoomListResponse)
-async def search_rooms(search_params: SearchParams, request: Request):
-    """숙소 검색 API"""
-    try:
-        # 세션 확인
-        session = get_session_from_cookies(request)
-        if not session:
-            raise HTTPException(status_code=401, detail="세션이 설정되지 않았습니다.")
-        
-        print(f" [SEARCH] 숙소 검색 요청: {search_params}")
-        print(f" [SESSION] 세션: {session[:10]}..." if len(session) > 10 else session)
-        
-        # 실제 API 호출 로직은 여기에 구현
-        # 현재는 빈 응답 반환
-        return RoomListResponse(
-            list=[],
-            total_count=0,
-            current_page=search_params.now_page or 1
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f" [ERROR] 숙소 검색 중 오류: {str(e)}")
-        raise HTTPException(status_code=500, detail="숙소 검색 중 오류가 발생했습니다.")
+router = APIRouter(prefix="/api", tags=["session"])
 
 @router.get("/session")
 async def get_session_info(request: Request):
@@ -85,8 +59,15 @@ async def validate_session(request: Request):
                     "message": "세션이 만료되었거나 유효하지 않습니다."
                 })
             
+            # error_code가 10인 경우도 세션 무효 처리
+            if test_result.error_code == 10 or (test_result.raw_response and test_result.raw_response.get("error_code") == 10):
+                return JSONResponse(content={
+                    "valid": False, 
+                    "message": "세션이 유효하지 않습니다. (error_code: 10)"
+                })
+            
             # 기타 오류도 세션 문제로 간주
-            if test_result.error_code and test_result.error_code != 200:
+            if test_result.error_code and test_result.error_code != 200 and test_result.error_code != 0:
                 return JSONResponse(content={
                     "valid": False, 
                     "message": f"세션 검증 중 오류 발생 (코드: {test_result.error_code})"
