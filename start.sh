@@ -163,7 +163,7 @@ trap cleanup SIGINT SIGTERM
 
 # 메인 실행 함수
 main() {
-    log_info "=== 33m2 프로젝트 시작 ==="
+    log_info "=== sw-33 프로젝트 시작 ==="
     
     # 시스템 요구사항 확인
     check_node
