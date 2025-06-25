@@ -52,7 +52,7 @@ export default function ActionButtons({ rooms }: ActionButtonsProps) {
   };
 
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionStatus, setSessionStatus] = useState<'none' | 'active' | 'checking'>('none');
+  const [sessionStatus, setSessionStatus] = useState<'none' | 'active' | 'checking'>('checking');
 
   // 세션 초기화 함수
   const clearSession = useCallback(() => {
@@ -85,29 +85,13 @@ export default function ActionButtons({ rooms }: ActionButtonsProps) {
         return true;
       } else {
         setSessionStatus('none');
-        alert(`세션 검증 실패: ${result.message}`);
+        console.log(`세션 검증 실패: ${result.message}`);
         return false;
       }
     } catch (error) {
       console.error('세션 검증 오류:', error);
       setSessionStatus('none');
-      alert('세션 검증 중 오류가 발생했습니다.');
       return false;
-    }
-  }, []);
-
-  // 세션 상태 확인 함수
-  const checkSessionStatus = useCallback(() => {
-    const sessionCookie = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('session='));
-    
-    if (sessionCookie) {
-      const sessionValue = sessionCookie.split('=')[1];
-      // 세션 값이 존재하고 빈 문자열이 아닌 경우에만 active
-      setSessionStatus(sessionValue && sessionValue.trim() !== '' ? 'active' : 'none');
-    } else {
-      setSessionStatus('none');
     }
   }, []);
 
@@ -120,10 +104,22 @@ export default function ActionButtons({ rooms }: ActionButtonsProps) {
     return sessionCookie ? sessionCookie.split('=')[1] : '';
   }, []);
 
-  // 컴포넌트 마운트 시 세션 상태 확인
+  // 세션 상태 확인 및 검증 함수
+  const checkAndValidateSession = useCallback(async () => {
+    const sessionValue = getCurrentSession();
+    
+    if (sessionValue && sessionValue.trim() !== '') {
+      // 세션 값이 있으면 백엔드로 검증
+      await validateSessionWithBackend(sessionValue);
+    } else {
+      setSessionStatus('none');
+    }
+  }, [getCurrentSession, validateSessionWithBackend]);
+
+  // 컴포넌트 마운트 시 세션 상태 확인 및 검증
   useEffect(() => {
-    checkSessionStatus();
-  }, [checkSessionStatus]);
+    checkAndValidateSession();
+  }, [checkAndValidateSession]);
 
   // 쿠키 세션 설정 함수
   const handleCookieSession = useCallback(async () => {
@@ -280,7 +276,7 @@ export default function ActionButtons({ rooms }: ActionButtonsProps) {
         <Button 
           onClick={handleCookieSession}
           variant="outline"
-          className="bg-blue-50 hover:bg-blue-100"
+          className={`${sessionStatus === 'active' ? 'bg-green-50 hover:bg-green-100' : sessionStatus === 'checking' ? 'bg-yellow-50 hover:bg-yellow-100' : 'bg-red-50 hover:bg-red-100'}`}
         >
           세션 설정
         </Button>
@@ -292,7 +288,7 @@ export default function ActionButtons({ rooms }: ActionButtonsProps) {
           variant="outline"
           size="sm"
           className="whitespace-nowrap"
-          disabled={isLoading}
+          disabled={isLoading || sessionStatus !== 'active'}
         >
           {isLoading ? '처리 중...' : '예약률 다운로드'}
         </Button>
